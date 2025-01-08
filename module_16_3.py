@@ -22,6 +22,12 @@ async def get_users() -> dict[str, str]:
 # post запрос по маршруту '/user/{username}/{age}',
 # который добавляет в словарь по максимальному по значению ключом значение строки
 # "Имя: {username}, возраст: {age}". И возвращает строку "User <user_id> is registered".
+@app.post('/user/{username}/{age}')
+async def post_user(username: str, age: str) -> str:
+    user_id = str(max(int(key) for key in users.keys())+1)
+    users[user_id] = f'Имя: {username}, возраст: {age}'
+    return 'user added'
+
 
 # put запрос по маршруту '/user/{user_id}/{username}/{age}',
 # который обновляет значение из словаря users под ключом user_id на строку
