@@ -1,9 +1,17 @@
-def main():
-    pass
+import uvicorn
+from fastapi import FastAPI
+
+
+app = FastAPI()
+
+
+@app.get("/")
+async def main_page() -> str:
+    return "main page"
 
 
 if __name__ == '__main__':
-    main()
+    uvicorn.run(app)
 
 
 """
