@@ -4,10 +4,31 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
+# Создайте словарь
+users = {'1': 'Имя: Example, возраст: 18'}
 
-@app.get("/")
+
+@app.get('/')
 async def main_page() -> str:
     return "main page"
+
+
+# get запрос по маршруту '/users', который возвращает словарь users.
+@app.get('/users')
+async def get_users() -> dict[str, str]:
+    return users
+
+
+# post запрос по маршруту '/user/{username}/{age}',
+# который добавляет в словарь по максимальному по значению ключом значение строки
+# "Имя: {username}, возраст: {age}". И возвращает строку "User <user_id> is registered".
+
+# put запрос по маршруту '/user/{user_id}/{username}/{age}',
+# который обновляет значение из словаря users под ключом user_id на строку
+# "Имя: {username}, возраст: {age}". И возвращает строку "The user <user_id> is updated"
+
+# delete запрос по маршруту '/user/{user_id}',
+# который удаляет из словаря users по ключу user_id пару.
 
 
 if __name__ == '__main__':
