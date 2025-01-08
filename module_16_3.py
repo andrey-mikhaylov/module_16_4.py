@@ -13,7 +13,8 @@ async def main_page() -> str:
     return "main page"
 
 
-# get запрос по маршруту '/users', который возвращает словарь users.
+# get запрос по маршруту '/users',
+# который возвращает словарь users.
 @app.get('/users')
 async def get_users() -> dict[str, str]:
     return users
@@ -21,21 +22,23 @@ async def get_users() -> dict[str, str]:
 
 # post запрос по маршруту '/user/{username}/{age}',
 # который добавляет в словарь по максимальному по значению ключом значение строки
-# "Имя: {username}, возраст: {age}". И возвращает строку "User <user_id> is registered".
+# "Имя: {username}, возраст: {age}".
+# И возвращает строку "User <user_id> is registered".
 @app.post('/user/{username}/{age}')
 async def post_user(username: str, age: str) -> str:
-    user_id = str(max((0, *(int(key) for key in users.keys()))) + 1)
+    user_id = str(int(max(users, key=int, default=0)) + 1)
     await put_user(user_id, username, age)
-    return 'user added'
+    return f"User {user_id} is registered"
 
 
 # put запрос по маршруту '/user/{user_id}/{username}/{age}',
 # который обновляет значение из словаря users под ключом user_id на строку
-# "Имя: {username}, возраст: {age}". И возвращает строку "The user <user_id> is updated"
+# "Имя: {username}, возраст: {age}".
+# И возвращает строку "The user <user_id> is updated"
 @app.put('/user/{user_id}/{username}/{age}')
 async def put_user(user_id: str, username: str, age: str) -> str:
     users[user_id] = f'Имя: {username}, возраст: {age}'
-    return 'user updated'
+    return f"The user {user_id} is updated"
 
 
 # delete запрос по маршруту '/user/{user_id}',
@@ -43,7 +46,7 @@ async def put_user(user_id: str, username: str, age: str) -> str:
 @app.delete('/user/{user_id}')
 async def delete_user(user_id: str) -> str:
     users.pop(user_id)
-    return f'deleted user {user_id}'
+    return f'The user {user_id} is deleted'
 
 
 if __name__ == '__main__':
