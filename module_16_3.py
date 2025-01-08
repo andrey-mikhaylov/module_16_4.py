@@ -4,19 +4,22 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
+
 # Создайте словарь
 users = {'1': 'Имя: Example, возраст: 18'}
 
 
 @app.get('/')
 async def main_page() -> str:
-    return "main page"
+    """ Главная страница """
+    return "Главная страница"
 
 
 # get запрос по маршруту '/users',
 # который возвращает словарь users.
 @app.get('/users')
 async def get_users() -> dict[str, str]:
+    """ Выдача всех пользователей """
     return users
 
 
@@ -26,6 +29,7 @@ async def get_users() -> dict[str, str]:
 # И возвращает строку "User <user_id> is registered".
 @app.post('/user/{username}/{age}')
 async def post_user(username: str, age: str) -> str:
+    """ Добавление пользователя """
     user_id = str(int(max(users, key=int, default=0)) + 1)
     await put_user(user_id, username, age)
     return f"User {user_id} is registered"
@@ -37,6 +41,7 @@ async def post_user(username: str, age: str) -> str:
 # И возвращает строку "The user <user_id> is updated"
 @app.put('/user/{user_id}/{username}/{age}')
 async def put_user(user_id: str, username: str, age: str) -> str:
+    """ Изменение пользователя """
     users[user_id] = f'Имя: {username}, возраст: {age}'
     return f"The user {user_id} is updated"
 
@@ -45,12 +50,21 @@ async def put_user(user_id: str, username: str, age: str) -> str:
 # который удаляет из словаря users по ключу user_id пару.
 @app.delete('/user/{user_id}')
 async def delete_user(user_id: str) -> str:
+    """ Удаление пользователя """
     users.pop(user_id)
     return f'The user {user_id} is deleted'
 
 
+@app.get('/shutdown')
+async def shutdown():
+    """ Выключение сервера """
+    global server
+    server.should_exit = True
+
+
 if __name__ == '__main__':
-    uvicorn.run(app)
+    server = uvicorn.Server(uvicorn.Config(app=app))
+    server.run()
 
 
 """
