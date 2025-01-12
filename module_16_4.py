@@ -10,7 +10,6 @@ app = FastAPI()
 MAX_USER_ID = 100
 MAX_AGE = 120
 
-
 id_field       = Field(..., ge=1, le=MAX_USER_ID,          description='номер пользователя',   example=1)
 username_field = Field(..., min_length=5, max_length=20,   description='имя пользователя',     example='UrbanUser')
 age_field      = Field(..., ge=18, le=MAX_AGE,             description='возраст пользователя', example=24)
@@ -41,13 +40,17 @@ async def get_users() -> List[User]:
 
 
 @app.post('/user/{username}/{age}', response_model=User)
-async def post_user(username: Annotated[str, username_field], age: Annotated[int, age_field]) -> User:
+async def post_user(
+        username: Annotated[str, username_field],
+        age: Annotated[int, age_field]
+    ) -> User:
     """ Добавление пользователя
 
     post запрос по маршруту '/user/{username}/{age}'
 
     Добавляет в список users объект User.
-    id этого объекта будет на 1 больше, чем у последнего в списке users. Если список users пустой, то 1.
+    id этого объекта будет на 1 больше, чем у последнего в списке users. (нет)
+    Если список users пустой, то 1.
     Все остальные параметры объекта User - переданные в функцию username и age соответственно.
     В конце возвращает созданного пользователя.
     """
@@ -65,15 +68,22 @@ def __get_user_index(user_id: int) -> int | None:
 
 
 @app.put('/user/{user_id}/{username}/{age}', response_model=User)
-async def put_user(user_id: Annotated[int, id_field], username: Annotated[str, username_field], age: Annotated[int, age_field]) -> User:
+async def put_user(
+        user_id: Annotated[int, id_field],
+        username: Annotated[str, username_field],
+        age: Annotated[int, age_field]
+    ) -> User:
     """ Изменение пользователя
 
     put запрос по маршруту '/user/{user_id}/{username}/{age}'
 
-    Обновляет username и age пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
-    В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
+    Обновляет username и age пользователя, если пользователь с таким user_id есть в списке users
+    и возвращает его.
+    В случае отсутствия пользователя выбрасывается
+    исключение HTTPException с описанием "User was not found" и кодом 404.
     """
-    if index := __get_user_index(user_id) is None:
+    index = __get_user_index(user_id)
+    if index is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
     user = User(id=user_id, username=username, age=age)
@@ -90,7 +100,8 @@ async def delete_user(user_id: Annotated[int, id_field]) -> User:
     Удаляет пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
     В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
     """
-    if index := __get_user_index(user_id) is None:
+    index = __get_user_index(user_id)
+    if index is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
     user = users.pop(index)
