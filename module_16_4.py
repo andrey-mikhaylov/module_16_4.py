@@ -1,13 +1,26 @@
 import uvicorn
-from fastapi import FastAPI, Path
-from typing import Annotated
+from fastapi import FastAPI, Path, HTTPException
+from typing import List, Annotated
+from pydantic import BaseModel, Field
 
 
 app = FastAPI()
 
 
-# Создайте словарь
-users = {'1': 'Имя: Example, возраст: 18'}
+MAX_USER_ID = 100
+MAX_AGE = 120
+
+
+id_field       = Field(..., ge=1, le=MAX_USER_ID,          description='номер пользователя',   example=1)
+username_field = Field(..., min_length=5, max_length=20,   description='имя пользователя',     example='UrbanUser')
+age_field      = Field(..., ge=18, le=MAX_AGE,             description='возраст пользователя', example=24)
+
+class User(BaseModel):
+    id: int = id_field
+    username: str = username_field
+    age: int = age_field
+
+users: List[User] = []
 
 
 @app.get('/')
@@ -16,53 +29,78 @@ async def main_page() -> str:
     return "Главная страница"
 
 
-# get запрос по маршруту '/users',
-# который возвращает словарь users.
-@app.get('/users')
-async def get_users() -> dict[str, str]:
-    """ Выдача всех пользователей """
+@app.get('/users', response_model=List[User])
+async def get_users() -> List[User]:
+    """ Выдача всех пользователей
+
+    get запрос по маршруту '/users'
+
+    Возвращает список users.
+    """
     return users
 
 
-# post запрос по маршруту '/user/{username}/{age}',
-# который добавляет в словарь по максимальному по значению ключом значение строки
-# "Имя: {username}, возраст: {age}".
-# И возвращает строку "User <user_id> is registered".
-@app.post('/user/{username}/{age}')
-async def post_user(
-        username: Annotated[str, Path(min_length=5, max_length=20, description='Enter username', example='UrbanUser')],
-        age: Annotated[int, Path(ge=18, le=120, description='Enter age', example=24)]
-    ) -> str:
-    """ Добавление пользователя """
-    user_id = str(int(max(users, key=int, default=0)) + 1)
-    await put_user(user_id, username, age)
-    return f"User {user_id} is registered"
+@app.post('/user/{username}/{age}', response_model=User)
+async def post_user(username: Annotated[str, username_field], age: Annotated[int, age_field]) -> User:
+    """ Добавление пользователя
+
+    post запрос по маршруту '/user/{username}/{age}'
+
+    Добавляет в список users объект User.
+    id этого объекта будет на 1 больше, чем у последнего в списке users. Если список users пустой, то 1.
+    Все остальные параметры объекта User - переданные в функцию username и age соответственно.
+    В конце возвращает созданного пользователя.
+    """
+    new_id = max([user.id for user in users], default = 0) + 1
+    user = User(id=new_id, username=username, age=age)
+    users.append(user)
+    return user
 
 
-# put запрос по маршруту '/user/{user_id}/{username}/{age}',
-# который обновляет значение из словаря users под ключом user_id на строку
-# "Имя: {username}, возраст: {age}".
-# И возвращает строку "The user <user_id> is updated"
-@app.put('/user/{user_id}/{username}/{age}')
-async def put_user(
-        user_id: Annotated[str, Path(min_length=1, max_length=3, description='Enter User ID', example='1')],
-        username: Annotated[str, Path(min_length=5, max_length=20, description='Enter username', example='UrbanUser')],
-        age: Annotated[int, Path(ge=18, le=120, description='Enter age', example=24)]
-    ) -> str:
-    """ Изменение пользователя """
-    users[user_id] = f'Имя: {username}, возраст: {age}'
-    return f"The user {user_id} is updated"
+def __get_user_index(user_id: int) -> int | None:
+    index = [index for index, user in enumerate(users) if user.id == user_id]
+    if len(index) != 1:
+        return None
+    return index[0]
 
 
-# delete запрос по маршруту '/user/{user_id}',
-# который удаляет из словаря users по ключу user_id пару.
-@app.delete('/user/{user_id}')
-async def delete_user(
-        user_id: Annotated[str, Path(min_length=1, max_length=3, description='Enter User ID', example='1')]
-    ) -> str:
-    """ Удаление пользователя """
-    users.pop(user_id)
-    return f'The user {user_id} is deleted'
+@app.put('/user/{user_id}/{username}/{age}', response_model=User)
+async def put_user(user: User) -> User:
+    """ Изменение пользователя
+
+    put запрос по маршруту '/user/{user_id}/{username}/{age}'
+
+    Обновляет username и age пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
+    В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
+    """
+    if index := __get_user_index(user.id) is None:
+        raise HTTPException(status_code=404, detail="User was not found")
+
+    users[index] = user
+    return user
+
+
+@app.delete('/user/{user_id}', response_model=User)
+async def delete_user(user_id: Annotated[int, id_field]) -> User:
+    """ Удаление пользователя
+
+    delete запрос по маршруту '/user/{user_id}'
+
+    Удаляет пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
+    В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
+    """
+    if index := __get_user_index(user_id) is None:
+        raise HTTPException(status_code=404, detail="User was not found")
+
+    user = users.pop(index)
+    return user
+
+
+@app.delete('/users')
+async def clear() -> List[User]:
+    """ Очистка БД для теста """
+    users.clear()
+    return users
 
 
 @app.get('/shutdown')
@@ -70,13 +108,6 @@ async def shutdown():
     """ Выключение сервера """
     global server
     server.should_exit = True
-
-
-@app.get('/restart')
-async def restart():
-    """ Перезапуск БД для теста """
-    global users
-    users = {'1': 'Имя: Example, возраст: 18'}
 
 
 if __name__ == '__main__':
@@ -101,18 +132,23 @@ username - имя пользователя (str)
 age - возраст пользователя (int)
 
 Измените и дополните ранее описанные 4 CRUD запроса:
+
 get запрос по маршруту '/users' теперь возвращает список users.
+
 post запрос по маршруту '/user/{username}/{age}', теперь:
 Добавляет в список users объект User.
 id этого объекта будет на 1 больше, чем у последнего в списке users. Если список users пустой, то 1.
 Все остальные параметры объекта User - переданные в функцию username и age соответственно.
 В конце возвращает созданного пользователя.
+
 put запрос по маршруту '/user/{user_id}/{username}/{age}' теперь:
 Обновляет username и age пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
 В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
+
 delete запрос по маршруту '/user/{user_id}', теперь:
 Удаляет пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
 В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
+
 Выполните каждый из этих запросов по порядку. Ответы должны совпадать:
 1. GET '/users'
 []
