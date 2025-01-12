@@ -27,6 +27,7 @@ def test_ok():
     # get /users -> [{"id":1,"username":"UrbanProfi","age":28},{"id":3,"username":"Admin","age":42}]
     # delete /user/2 -> {"detail":"User was not found"}
 
+
 def test_error():
     check(get,    '/users1')
     check(post,   '/user/U/2224')
