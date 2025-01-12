@@ -65,7 +65,7 @@ def __get_user_index(user_id: int) -> int | None:
 
 
 @app.put('/user/{user_id}/{username}/{age}', response_model=User)
-async def put_user(user: User) -> User:
+async def put_user(user_id: Annotated[int, id_field], username: Annotated[str, username_field], age: Annotated[int, age_field]) -> User:
     """ Изменение пользователя
 
     put запрос по маршруту '/user/{user_id}/{username}/{age}'
@@ -73,9 +73,10 @@ async def put_user(user: User) -> User:
     Обновляет username и age пользователя, если пользователь с таким user_id есть в списке users и возвращает его.
     В случае отсутствия пользователя выбрасывается исключение HTTPException с описанием "User was not found" и кодом 404.
     """
-    if index := __get_user_index(user.id) is None:
+    if index := __get_user_index(user_id) is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
+    user = User(id=user_id, username=username, age=age)
     users[index] = user
     return user
 
